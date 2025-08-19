@@ -3,12 +3,15 @@ name: Build Android (APK)
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -16,24 +19,33 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Android SDK
-        uses: reactivecircus/android-emulator-runner@v2
+      # Installa Android SDK e i pacchetti necessari
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          api-level: 33
-          arch: x86_64
-          script: echo "SDK ready"
+          packages: |
+            platform-tools
+            platforms;android-33
+            build-tools;33.0.2
 
-      # ⬇️ Installa Gradle e compila senza wrapper
-      - name: Install Gradle
+      # Scompatta il progetto (assicurati che HelloWorldApp.zip sia nella radice del repo)
+      - name: Unzip project
+        run: unzip -o HelloWorldApp.zip
+
+      # Prepara Gradle 8.6 (dato che il progetto non ha il wrapper)
+      - name: Set up Gradle 8.6
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.6
 
+      # Compila l'APK di debug dentro la cartella scompattata
       - name: Build debug APK
+        working-directory: HelloWorldApp
         run: gradle assembleDebug
 
+      # Pubblica l'APK come artefatto
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug.apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-debug-apk
+          path: HelloWorldApp/app/build/outputs/apk/debug/app-debug.apk
