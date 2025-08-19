@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -18,25 +19,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Installa l’SDK Android e accetta le licenze
-      - name: Install Android SDK
-      # Questo action scarica automaticamente il pacchetto per l’API 33 e gli strumenti di build
-        uses: reactivecircus/android-sdk@v3
+      # Installa Android SDK + accetta licenze
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          api-level: 33
-          build-tools: 33.0.2
+          # ⚠️ TUTTO su una sola riga:
+          packages: 'platform-tools platforms;android-33 build-tools;33.0.2'
+          accept-android-sdk-licenses: 'true'
+          log-accepted-android-sdk-licenses: 'true'
 
-      # Prepara Gradle (dato che il progetto non include il wrapper)
+      # (opzionale) Rinforzo: installa/ripara eventuali pacchetti mancanti
+      - name: Ensure packages present
+        run: |
+          sdkmanager --install "platforms;android-33" "build-tools;33.0.2" || true
+
+      # Prepara Gradle 8.6 (il progetto non ha il wrapper)
       - name: Set up Gradle 8.6
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.6
 
-      # Scompatta il progetto HelloWorldApp
+      # Scompatta lo ZIP del progetto (se nel repo c’è HelloWorldApp.zip)
       - name: Unzip project
         run: unzip -o HelloWorldApp.zip
 
-      # Compila l’APK di debug
+      # Compila l’APK di debug dalla cartella scompattata
       - name: Build debug APK
         working-directory: HelloWorldApp
         run: gradle assembleDebug
